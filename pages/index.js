@@ -13,7 +13,26 @@ export default function Home() {
   const [logs, setLogs] = useState([]);
   const eventSource = useRef(null);
 
-  // Generate HWID on load
+  // Anti‑dump: disable right-click and warn on devtools
+  useEffect(() => {
+    const disableContext = (e) => {
+      e.preventDefault();
+      alert("Nice try kid!");
+      return false;
+    };
+    document.addEventListener('contextmenu', disableContext);
+    
+    // Detect DevTools (simple heuristic)
+    let devtools = /Chrome/.test(navigator.userAgent) && /Google Inc/.test(navigator.vendor);
+    if (devtools) {
+      setInterval(() => {
+        if (window.devtools && window.devtools.open) alert("Nice try kid!");
+      }, 1000);
+    }
+    return () => document.removeEventListener('contextmenu', disableContext);
+  }, []);
+
+  // Generate HWID
   useEffect(() => {
     generateHWID().then(setHwid);
   }, []);
@@ -41,7 +60,7 @@ export default function Home() {
 
   async function copyHWID() {
     await navigator.clipboard.writeText(hwid);
-    alert('HWID copied to clipboard!');
+    alert('HWID copied to clipboard');
   }
 
   async function handleLogin() {
@@ -121,7 +140,9 @@ export default function Home() {
     return (
       <div className="login-container">
         <div className="login-card">
-          <div className="brand-icon">💣</div>
+          <div className="brand-icon">
+            <i className="fas fa-bomb"></i>
+          </div>
           <h1>WANITOMODZ</h1>
           <p className="sub">SMS BOMB TOOL</p>
           <div className="input-group">
@@ -129,37 +150,33 @@ export default function Home() {
           </div>
           <div className="hwid-row">
             <input type="text" readOnly value={hwid} placeholder="HWID" />
-            <button onClick={copyHWID} className="copy-btn">📋 Copy</button>
+            <button onClick={copyHWID} className="copy-btn">
+              <i className="fas fa-copy"></i> Copy
+            </button>
           </div>
-          <button onClick={handleLogin} className="login-btn">UNLOCK TOOL</button>
+          <button onClick={handleLogin} className="login-btn">
+            <i className="fas fa-unlock-alt"></i> UNLOCK TOOL
+          </button>
           {error && <p className="error">{error}</p>}
           <p className="footer">© 2026 WanitoModz | HWID Lock</p>
         </div>
-        <style jsx>{`
-          .login-container {
-            display: flex; justify-content: center; align-items: center; min-height: 100vh;
-            background: linear-gradient(135deg, #0a0c12 0%, #0f121c 100%);
-            font-family: 'Inter', sans-serif;
-          }
-          .login-card {
-            background: #141722; border-radius: 32px; border: 1px solid rgba(255,255,255,0.08);
-            padding: 40px 32px; width: 380px; box-shadow: 0 25px 50px -12px black;
-            text-align: center;
-          }
-          .brand-icon { font-size: 64px; margin-bottom: 16px; }
+        <style jsx global>{`
+          @import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap');
+          @import url('https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css');
+          * { margin: 0; padding: 0; box-sizing: border-box; }
+          body { font-family: 'Inter', sans-serif; background: linear-gradient(135deg, #0a0c12 0%, #0f121c 100%); min-height: 100vh; }
+          .login-container { display: flex; justify-content: center; align-items: center; min-height: 100vh; }
+          .login-card { background: #141722; border-radius: 32px; border: 1px solid rgba(255,255,255,0.08); padding: 40px 32px; width: 380px; box-shadow: 0 25px 50px -12px black; text-align: center; }
+          .brand-icon { font-size: 64px; color: #ff3e6c; margin-bottom: 16px; }
           h1 { font-size: 28px; font-weight: 800; background: linear-gradient(135deg,#fff,#ff3e6c); -webkit-background-clip: text; background-clip: text; color: transparent; }
           .sub { color: #a0a5b5; margin-bottom: 32px; }
-          .input-group input, .hwid-row input {
-            width: 100%; padding: 14px 16px; background: #1e2432; border: 1px solid #2a2f3f;
-            border-radius: 60px; color: white; font-size: 15px; margin-bottom: 16px;
-            outline: none;
-          }
+          .input-group input, .hwid-row input { width: 100%; padding: 14px 16px; background: #1e2432; border: 1px solid #2a2f3f; border-radius: 60px; color: white; font-size: 15px; margin-bottom: 16px; outline: none; }
           .hwid-row { display: flex; gap: 12px; margin-bottom: 24px; }
           .hwid-row input { flex: 1; margin-bottom: 0; }
-          .copy-btn { background: #2a2f3f; border: none; border-radius: 60px; padding: 0 20px; color: white; cursor: pointer; }
-          .login-btn { width: 100%; padding: 14px; background: linear-gradient(135deg,#ff3e6c,#d62e56); border: none;
-            border-radius: 60px; color: white; font-weight: 700; cursor: pointer; transition: 0.2s; }
-          .login-btn:hover { transform: scale(1.02); }
+          .copy-btn { background: #2a2f3f; border: none; border-radius: 60px; padding: 0 20px; color: white; cursor: pointer; transition: 0.2s; }
+          .copy-btn:hover { background: #ff3e6c; }
+          .login-btn { width: 100%; padding: 14px; background: linear-gradient(135deg,#ff3e6c,#d62e56); border: none; border-radius: 60px; color: white; font-weight: 700; cursor: pointer; transition: 0.2s; display: flex; align-items: center; justify-content: center; gap: 8px; }
+          .login-btn:hover { transform: scale(1.02); filter: brightness(1.05); }
           .error { color: #ff4444; margin-top: 16px; font-size: 13px; }
           .footer { margin-top: 32px; font-size: 12px; color: #a0a5b5; }
         `}</style>
@@ -170,24 +187,36 @@ export default function Home() {
   return (
     <div className="dashboard">
       <div className="header">
-        <div className="logo"><span className="gradient">WANITOMODZ</span> BOMBER</div>
-        <div className="user"><span className="badge">Valid until: {expiry}</span><button className="logout" onClick={() => location.reload()}>Logout</button></div>
+        <div className="logo">
+          <i className="fas fa-bomb"></i>
+          <span className="gradient">WANITOMODZ</span> BOMBER
+        </div>
+        <div className="user">
+          <span className="badge"><i className="far fa-clock"></i> Valid until: {expiry}</span>
+          <button className="logout" onClick={() => location.reload()}>
+            <i className="fas fa-sign-out-alt"></i> Logout
+          </button>
+        </div>
       </div>
       <div className="grid">
         <div className="card">
-          <h2>🎯 Attack Controls</h2>
+          <h2><i className="fas fa-rocket"></i> Attack Controls</h2>
           <div className="row">
             <input type="tel" placeholder="09123456789" value={phone} onChange={e => setPhone(e.target.value)} />
             <input type="number" min="1" max="100" value={batches} onChange={e => setBatches(parseInt(e.target.value) || 1)} />
           </div>
           <div className="buttons">
-            <button onClick={startAttack} disabled={attacking} className="start">▶ START BOMBING</button>
-            <button onClick={stopAttack} disabled={!attacking} className="stop">⏹ STOP</button>
+            <button onClick={startAttack} disabled={attacking} className="start">
+              <i className="fas fa-play"></i> START BOMBING
+            </button>
+            <button onClick={stopAttack} disabled={!attacking} className="stop">
+              <i className="fas fa-stop"></i> STOP
+            </button>
           </div>
           <div className="note">15 services | Parallel attack | Automatic cooldown</div>
         </div>
         <div className="card">
-          <h2>📊 Live Statistics</h2>
+          <h2><i className="fas fa-chart-line"></i> Live Statistics</h2>
           <div className="stats">
             <div><span>Total</span><strong>{stats.total}</strong></div>
             <div><span>Success</span><strong style={{color:'#00e676'}}>{stats.success}</strong></div>
@@ -196,34 +225,42 @@ export default function Home() {
           </div>
         </div>
         <div className="card full-width">
-          <h2>📜 Live Logs</h2>
+          <h2><i className="fas fa-terminal"></i> Live Logs</h2>
           <div className="logs">
             {logs.map((log, i) => (
               <div key={i} className={`log-entry ${log.success ? 'success' : log.type === 'system' ? 'system' : 'fail'}`}>
                 <span className="time">{log.timestamp}</span>
                 {log.batch && <span className="batch">[Batch {log.batch}]</span>}
                 <span className="service">{log.service || log.message?.split(' ')[0]}</span>
-                <span className="msg">{log.message || (log.success ? '✓ Success' : '✗ Failed')}</span>
+                <span className="msg">{log.message || (log.success ? 'Success' : 'Failed')}</span>
               </div>
             ))}
           </div>
         </div>
       </div>
-      <style jsx>{`
-        .dashboard { max-width: 1400px; margin: 0 auto; padding: 24px; font-family: 'Inter', sans-serif; background: #0a0c12; min-height: 100vh; color: white; }
+      <style jsx global>{`
+        @import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap');
+        @import url('https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css');
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        body { font-family: 'Inter', sans-serif; background: #0a0c12; color: white; }
+        .dashboard { max-width: 1400px; margin: 0 auto; padding: 24px; min-height: 100vh; }
         .header { display: flex; justify-content: space-between; align-items: center; background: #141722; border-radius: 60px; padding: 12px 24px; margin-bottom: 32px; border: 1px solid rgba(255,255,255,0.08); }
-        .logo { font-size: 24px; font-weight: 800; }
+        .logo { font-size: 24px; font-weight: 800; display: flex; align-items: center; gap: 12px; }
+        .logo i { color: #ff3e6c; }
         .gradient { background: linear-gradient(135deg,#fff,#ff3e6c); -webkit-background-clip: text; background-clip: text; color: transparent; }
         .badge { background: #1e2432; padding: 6px 16px; border-radius: 60px; font-size: 13px; margin-right: 16px; }
-        .logout { background: none; border: 1px solid #ff3e6c; padding: 6px 16px; border-radius: 60px; color: white; cursor: pointer; }
+        .badge i { margin-right: 6px; }
+        .logout { background: none; border: 1px solid #ff3e6c; padding: 6px 16px; border-radius: 60px; color: white; cursor: pointer; transition: 0.2s; }
+        .logout:hover { background: #ff3e6c; border-color: #ff3e6c; }
         .grid { display: grid; grid-template-columns: 1fr 1fr; gap: 24px; }
         .card { background: #141722; border-radius: 28px; border: 1px solid rgba(255,255,255,0.08); padding: 28px; transition: 0.2s; }
         .full-width { grid-column: span 2; }
-        h2 { font-size: 20px; margin-bottom: 20px; display: flex; align-items: center; gap: 8px; }
+        h2 { font-size: 20px; margin-bottom: 20px; display: flex; align-items: center; gap: 12px; }
+        h2 i { color: #ff3e6c; }
         .row { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; margin-bottom: 24px; }
         .row input { background: #1e2432; border: 1px solid #2a2f3f; border-radius: 60px; padding: 12px 20px; color: white; font-size: 15px; outline: none; }
         .buttons { display: flex; gap: 16px; }
-        .start, .stop { flex: 1; padding: 12px; border-radius: 60px; font-weight: 700; border: none; cursor: pointer; transition: 0.2s; }
+        .start, .stop { flex: 1; padding: 12px; border-radius: 60px; font-weight: 700; border: none; cursor: pointer; transition: 0.2s; display: flex; align-items: center; justify-content: center; gap: 8px; }
         .start { background: linear-gradient(135deg,#00e676,#00b35e); color: white; }
         .stop { background: #ff4444; color: white; }
         .start:disabled, .stop:disabled { opacity: 0.5; cursor: not-allowed; }
@@ -233,7 +270,7 @@ export default function Home() {
         .stats span { display: block; font-size: 13px; color: #a0a5b5; margin-bottom: 8px; }
         .stats strong { font-size: 28px; }
         .logs { background: #0a0c12; border-radius: 20px; height: 320px; overflow-y: auto; padding: 12px; font-family: monospace; font-size: 12px; }
-        .log-entry { padding: 8px 12px; margin-bottom: 6px; border-left: 3px solid; border-radius: 10px; background: #1e2432; display: flex; gap: 12px; flex-wrap: wrap; }
+        .log-entry { padding: 8px 12px; margin-bottom: 6px; border-left: 3px solid; border-radius: 10px; background: #1e2432; display: flex; gap: 12px; flex-wrap: wrap; align-items: baseline; }
         .log-entry.success { border-left-color: #00e676; }
         .log-entry.fail { border-left-color: #ff4444; }
         .log-entry.system { border-left-color: #ffb74d; }
