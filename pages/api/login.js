@@ -1,15 +1,16 @@
+import fs from 'fs';
+import path from 'path';
+
 export default async function handler(req, res) {
   if (req.method !== 'POST') return res.status(405).end();
   const { key, hwid } = req.body;
   if (!key || !hwid) return res.status(400).json({ error: 'Missing key or HWID' });
 
-  // ⚠️ REPLACE WITH YOUR ACTUAL GITHUB RAW URL (without ?token=...)
-  const GITHUB_KEY_URL = 'https://raw.githubusercontent.com/WanitoModzz040126/Wanito-key/refs/heads/main/key.json';
-
   try {
-    const keyRes = await fetch(GITHUB_KEY_URL);
-    if (!keyRes.ok) throw new Error('Key server unreachable');
-    const keyData = await keyRes.json();
+    // Basahin ang key.json mula sa project root
+    const keyFilePath = path.join(process.cwd(), 'key.json');
+    const keyFileContent = fs.readFileSync(keyFilePath, 'utf8');
+    const keyData = JSON.parse(keyFileContent);
     const keyInfo = keyData.keys?.[key];
 
     if (!keyInfo) return res.status(401).json({ error: 'Invalid key' });
