@@ -13,7 +13,7 @@ export default function Home() {
   const [logs, setLogs] = useState([]);
   const eventSource = useRef(null);
 
-  // Anti‑dump: disable right-click and warn on devtools
+  // Anti‑dump: disable right-click & detect devtools
   useEffect(() => {
     const disableContext = (e) => {
       e.preventDefault();
@@ -21,15 +21,13 @@ export default function Home() {
       return false;
     };
     document.addEventListener('contextmenu', disableContext);
-    
-    // Detect DevTools (simple heuristic)
-    let devtools = /Chrome/.test(navigator.userAgent) && /Google Inc/.test(navigator.vendor);
-    if (devtools) {
-      setInterval(() => {
-        if (window.devtools && window.devtools.open) alert("Nice try kid!");
-      }, 1000);
-    }
-    return () => document.removeEventListener('contextmenu', disableContext);
+    let devtoolsInterval = setInterval(() => {
+      if (window.devtools && window.devtools.open) alert("Nice try kid!");
+    }, 1000);
+    return () => {
+      document.removeEventListener('contextmenu', disableContext);
+      clearInterval(devtoolsInterval);
+    };
   }, []);
 
   // Generate HWID
@@ -116,7 +114,7 @@ export default function Home() {
       const res = await fetch('/api/attack', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ phone, batches, token: 'dummy' })
+        body: JSON.stringify({ phone, batches })
       });
       if (!res.ok) {
         const err = await res.json();
