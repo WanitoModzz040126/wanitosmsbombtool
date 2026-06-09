@@ -7,7 +7,6 @@ export default async function handler(req, res) {
   if (!key || !hwid) return res.status(400).json({ error: 'Missing key or HWID' });
 
   try {
-    // Basahin ang key.json mula sa project root
     const keyFilePath = path.join(process.cwd(), 'key.json');
     const keyFileContent = fs.readFileSync(keyFilePath, 'utf8');
     const keyData = JSON.parse(keyFileContent);
