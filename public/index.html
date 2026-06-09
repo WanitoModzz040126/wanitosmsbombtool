@@ -1,0 +1,67 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
+    <title>WanitoModz SMS Bomb Tool</title>
+    <link rel="stylesheet" href="style.css">
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+</head>
+<body>
+<div id="app">
+    <!-- Login Screen -->
+    <div id="login-screen" class="screen active">
+        <div class="card animate-slide-up">
+            <div class="brand-icon"><i class="fas fa-bomb"></i></div>
+            <h1 class="brand-title">WANITOMODZ</h1>
+            <p class="brand-subtitle">SMS BOMB TOOL</p>
+            <div class="login-form">
+                <div class="input-group"><i class="fas fa-key"></i><input type="text" id="license-key" placeholder="Enter License Key" autocomplete="off"></div>
+                <button id="login-btn" class="btn-primary"><i class="fas fa-unlock-alt"></i> UNLOCK TOOL</button>
+                <div id="login-error" class="error-message"></div>
+            </div>
+            <div class="login-footer"><p>© 2026 WanitoModz | Protected by HWID Lock</p></div>
+        </div>
+    </div>
+
+    <!-- Dashboard -->
+    <div id="dashboard-screen" class="screen">
+        <div class="dashboard-container">
+            <div class="dashboard-header">
+                <div class="logo-area"><i class="fas fa-bomb"></i><span>WANITOMODZ<span class="highlight">BOMBER</span></span></div>
+                <div class="user-info"><span id="expiry-badge" class="badge">Loading...</span><button id="logout-btn" class="icon-btn"><i class="fas fa-sign-out-alt"></i></button></div>
+            </div>
+            <div class="dashboard-grid">
+                <div class="card control-card">
+                    <h2><i class="fas fa-rocket"></i> Attack Controls</h2>
+                    <div class="input-row">
+                        <div class="input-group"><i class="fas fa-phone-alt"></i><input type="tel" id="target-number" placeholder="09123456789 or 9123456789"></div>
+                        <div class="input-group"><i class="fas fa-layer-group"></i><input type="number" id="batch-count" min="1" max="100" value="5" placeholder="Batches (1-100)"></div>
+                    </div>
+                    <div class="button-group">
+                        <button id="start-btn" class="btn-start"><i class="fas fa-play"></i> START BOMBING</button>
+                        <button id="stop-btn" class="btn-stop" disabled><i class="fas fa-stop"></i> STOP</button>
+                    </div>
+                    <div class="info-note"><i class="fas fa-info-circle"></i> 15 services | Parallel attack | Automatic cooldown</div>
+                </div>
+                <div class="card stats-card">
+                    <h2><i class="fas fa-chart-line"></i> Live Statistics</h2>
+                    <div class="stats-grid">
+                        <div class="stat-item"><span class="stat-label">Total Sent</span><span id="stat-total" class="stat-value">0</span></div>
+                        <div class="stat-item"><span class="stat-label">Successful</span><span id="stat-success" class="stat-value success">0</span></div>
+                        <div class="stat-item"><span class="stat-label">Failed</span><span id="stat-fail" class="stat-value fail">0</span></div>
+                        <div class="stat-item"><span class="stat-label">Success Rate</span><span id="stat-rate" class="stat-value">0%</span></div>
+                    </div>
+                </div>
+                <div class="card logs-card">
+                    <h2><i class="fas fa-terminal"></i> Live Logs</h2>
+                    <div id="log-container" class="log-container"><div class="log-entry system">✨ Ready. Enter license key.</div></div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+<script src="script.js"></script>
+</body>
+</html>
